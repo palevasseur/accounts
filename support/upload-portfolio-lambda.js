@@ -3,8 +3,10 @@ const AdmZip = require('adm-zip');
 
 const bucket = 'accountsapp-build.cg-palevasseur75';
 const key = 'accountsapp.zip';
+const codepipeline = new aws.CodePipeline({apiVersion: '2015-07-09'})
 
-exports.handler = async function(args) {
+exports.handler = async function(event, context) {
+  const jobId = event["CodePipeline.job"].id;
   try {
     // get zip file
     const s3 = new aws.S3({ apiVersion: '2006-03-01' });
@@ -31,11 +33,23 @@ exports.handler = async function(args) {
 
     // wait all promise before end
     await Promise.all(bucketsList);
+
+    // propagate pipeline result
+    await codepipeline.putJobSuccessResult({jobId}).promise();
   }
   catch (err) {
-    console.log(err);
+    /*console.log(err);
     const message = `Error getting object ${key} from bucket ${bucket}. Make sure they exist and your bucket is in the same region as this function.`;
     console.log(message);
-    throw new Error(message);
+    throw new Error(message);*/
+    const params = {
+      jobId,
+      failureDetails: {
+        message: err.toString(),
+        type: 'JobFailed',
+        externalExecutionId: context.invokeid
+      }
+    };
+    await codepipeline.putJobFailureResult(params).promise();
   }
 };
