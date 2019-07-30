@@ -1,5 +1,9 @@
 version: 0.1
 
+install:
+  runtime-versions:
+    nodejs: nodejs: 8
+
 phases:
   build:
     commands:
